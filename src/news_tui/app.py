@@ -3,12 +3,14 @@
 This module defines the main application class and screen navigation.
 """
 
+import webbrowser
 from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container
-from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
+from textual.containers import Container, ScrollableContainer
+from textual.screen import Screen
+from textual.widgets import Footer, Header, Label, ListItem, ListView, Markdown, Static
 
 from news_tui.core.config import Config, get_db_path, get_sources_path, load_config
 from news_tui.core.errors import Err, Ok
@@ -17,7 +19,7 @@ from news_tui.ui.styles import APP_CSS, get_score_class
 
 
 def format_score_indicator(label: str, score: float, inverted: bool = False) -> str:
-    """Format a score as a colored indicator.
+    """Format a score as a colored indicator with numeric value.
 
     Args:
         label: Score label (SEN, SNS, etc.)
@@ -34,11 +36,12 @@ def format_score_indicator(label: str, score: float, inverted: bool = False) -> 
     css_class = get_score_class(display_score, inverted)
     color = {"score-low": "red", "score-mid": "yellow", "score-high": "green"}[css_class]
 
-    # Build bar
-    filled = int(display_score * 5)
-    bar = "█" * filled + "░" * (5 - filled)
+    # Build bar (10 segments for better granularity)
+    filled = int(display_score * 10)
+    bar = "█" * filled + "░" * (10 - filled)
 
-    return f"[{color}]{label}[/{color}] [{color}]{bar}[/{color}]"
+    # Show numeric value for precision
+    return f"[#c4b5fd]{label}[/#c4b5fd] [{color}]{bar}[/{color}] [dim]{score:+.2f}[/dim]"
 
 
 def format_article_scores(article: Article) -> str:
@@ -53,27 +56,42 @@ def format_article_scores(article: Article) -> str:
     sen = format_score_indicator("SEN", article.scores.sentiment)
     sig = format_score_indicator("SIG", article.scores.signal)
 
-    topics = " ".join(f"[dim]#{t}[/dim]" for t in article.scores.topics[:3])
+    # Topic tags with cyberpunk colors
+    topic_colors = {"ai": "#c084fc", "tech": "#60a5fa", "crypto": "#fbbf24",
+                    "finance": "#34d399", "science": "#22d3ee", "culture": "#f472b6"}
+    topics_formatted = []
+    for t in article.scores.topics[:3]:
+        color = topic_colors.get(t.lower(), "#7c7c9a")
+        topics_formatted.append(f"[{color}]#{t}[/{color}]")
+    topics = " ".join(topics_formatted)
 
     return f"{sen} {sig} {topics}"
 
 
 class ArticleListItem(ListItem):
-    """A single article in the list view."""
+    """A single article in the list view with TL;DR."""
 
     def __init__(self, article: Article, **kwargs) -> None:
         super().__init__(**kwargs)
         self.article = article
 
     def compose(self) -> ComposeResult:
-        title = self.article.title[:60] + "..." if len(self.article.title) > 60 else self.article.title
-        yield Label(f"[bold]{title}[/bold]")
+        title = self.article.title[:70] + "..." if len(self.article.title) > 70 else self.article.title
+        yield Label(f"[bold #c4b5fd]{title}[/bold #c4b5fd]")
 
         source = self.article.source_id
         time = f"{self.article.read_time_minutes}m"
-        scores = format_article_scores(self.article)
 
-        yield Label(f"[dim]{source}[/dim] • {time} | {scores}", classes="article-meta")
+        yield Label(f"[#7c7c9a]{source}[/#7c7c9a] [#8b5cf6]•[/#8b5cf6] [#a78bfa]{time}[/#a78bfa]", classes="article-meta")
+
+        # Scores on separate line for better readability
+        scores = format_article_scores(self.article)
+        yield Label(scores, classes="article-meta")
+
+        # TL;DR preview
+        if self.article.tldr:
+            tldr_preview = self.article.tldr[:100] + "..." if len(self.article.tldr) > 100 else self.article.tldr
+            yield Label(f"[#7c7c9a italic]\"{tldr_preview}\"[/#7c7c9a italic]", classes="article-tldr")
 
 
 class PlaceholderItem(ListItem):
@@ -105,6 +123,117 @@ class MainScreen(Static):
         )
 
 
+ARTICLE_DETAIL_CSS = """
+ArticleDetailScreen {
+    background: #13131f;
+}
+
+#article-detail-container {
+    background: #13131f;
+    padding: 1 2;
+}
+
+#article-detail-container > Label {
+    margin-bottom: 1;
+}
+
+.detail-title {
+    text-style: bold;
+    color: #c4b5fd;
+    margin-bottom: 1;
+}
+
+.detail-meta {
+    color: #7c7c9a;
+    margin-bottom: 1;
+}
+
+.detail-scores {
+    margin-bottom: 1;
+}
+
+.detail-tldr {
+    background: #1a1a2e;
+    padding: 1;
+    margin: 1 0;
+    border: round #8b5cf6;
+}
+
+.detail-content {
+    color: #e4e4f0;
+    padding: 1 0;
+}
+"""
+
+
+class ArticleDetailScreen(Screen):
+    """Screen showing full article details."""
+
+    CSS = ARTICLE_DETAIL_CSS
+
+    BINDINGS = [
+        Binding("escape", "go_back", "Back"),
+        Binding("q", "go_back", "Back"),
+        Binding("o", "open_browser", "Browser"),
+        Binding("j", "scroll_down", "Down", show=False),
+        Binding("k", "scroll_up", "Up", show=False),
+    ]
+
+    def __init__(self, article: Article, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.article = article
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+
+        with ScrollableContainer(id="article-detail-container"):
+            # Title
+            yield Label(f"[bold #c4b5fd]{self.article.title}[/bold #c4b5fd]", classes="detail-title")
+
+            # Meta info
+            source = self.article.source_id
+            time = f"{self.article.read_time_minutes} min read"
+            yield Label(f"[#7c7c9a]{source} • {time}[/#7c7c9a]", classes="detail-meta")
+
+            # Scores
+            scores = format_article_scores(self.article)
+            yield Label(scores, classes="detail-scores")
+
+            # TL;DR section
+            if self.article.tldr:
+                yield Label("[bold #a78bfa]TL;DR[/bold #a78bfa]")
+                yield Label(f"[#e4e4f0 italic]{self.article.tldr}[/#e4e4f0 italic]", classes="detail-tldr")
+
+            # Content
+            yield Label("[bold #a78bfa]Content[/bold #a78bfa]")
+            content = self.article.raw.content or "No content available."
+            yield Label(f"[#e4e4f0]{content}[/#e4e4f0]", classes="detail-content")
+
+            # URL
+            yield Label(f"\n[dim]URL: {self.article.url}[/dim]")
+
+        yield Footer()
+
+    def action_go_back(self) -> None:
+        """Go back to the article list."""
+        self.app.pop_screen()
+
+    def action_open_browser(self) -> None:
+        """Open article in browser."""
+        webbrowser.open(str(self.article.url))
+        self.notify(f"Opening in browser...")
+
+    def action_scroll_down(self) -> None:
+        """Scroll down."""
+        container = self.query_one("#article-detail-container")
+        container.scroll_down()
+
+    def action_scroll_up(self) -> None:
+        """Scroll up."""
+        container = self.query_one("#article-detail-container")
+        container.scroll_up()
+
+
 class NewsTuiApp(App):
     """The main news-tui application."""
 
@@ -116,10 +245,12 @@ class NewsTuiApp(App):
         Binding("q", "quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
         Binding("s", "stats", "Stats"),
+        Binding("v", "view_article", "View"),
+        Binding("o", "open_browser", "Browser"),
         Binding("?", "help", "Help"),
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
-        Binding("enter", "select", "Open", show=False),
+        Binding("enter", "view_article", "View", show=False),
     ]
 
     def __init__(self, config: Config | None = None, **kwargs) -> None:
@@ -195,6 +326,55 @@ class NewsTuiApp(App):
     def action_stats(self) -> None:
         """Show reading statistics."""
         self.notify("Stats view coming in Phase 3...")
+
+    def _get_selected_article(self) -> Article | None:
+        """Get the currently selected article."""
+        article_list = self.query_one("#article-list", ArticleList)
+        if article_list.highlighted_child is None:
+            return None
+
+        selected = article_list.highlighted_child
+        if isinstance(selected, ArticleListItem):
+            return selected.article
+        return None
+
+    def action_view_article(self) -> None:
+        """View the selected article in the terminal."""
+        article = self._get_selected_article()
+        if article is None:
+            self.notify("No article selected", severity="warning")
+            return
+
+        # Show article detail screen
+        self.push_screen(ArticleDetailScreen(article))
+        self._mark_as_read(article)
+
+    def action_open_browser(self) -> None:
+        """Open the selected article in the browser."""
+        article = self._get_selected_article()
+        if article is None:
+            self.notify("No article selected", severity="warning")
+            return
+
+        url = str(article.url)
+        webbrowser.open(url)
+        self.notify(f"Opening in browser: {article.title[:40]}...")
+        self._mark_as_read(article)
+
+    def _mark_as_read(self, article: Article) -> None:
+        """Mark an article as read in the database."""
+        db = self._get_db()
+        if db is None:
+            return
+
+        from news_tui.track.history import mark_as_read
+
+        mark_as_read(
+            db,
+            article_id=article.id,
+            topics=list(article.scores.topics),
+            duration_seconds=None,  # We don't track time yet
+        )
 
     def action_help(self) -> None:
         """Show help."""
