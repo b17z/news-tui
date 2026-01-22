@@ -2,7 +2,7 @@
 
 Mindful terminal news reader with analysis-first consumption. News is analyzed before being presented — sentiment, bias, quality scoring — to prevent doomscrolling and promote epistemic hygiene.
 
-**Current phase:** Phase 2 (Analysis Layer) ✅
+**Current phase:** Phase 3 (Tracking & Nudges) ✅
 **Test count:** 84 tests (target: 80%+ coverage)
 
 ## Quick Start
@@ -145,8 +145,8 @@ Each article shows colored score indicators at a glance:
 |-------|-------|--------|
 | 1 | Foundation (scaffolding, Markov, RSS, basic TUI) | ✅ Complete |
 | 2 | Analysis layer (sentiment, topics, quality) | ✅ Complete |
-| 3 | Tracking & nudges (history, drift, diversify) | 🔄 Current |
-| 4 | Advanced analysis (BERTopic, bias, sensationalism) | ⏳ |
+| 3 | Tracking & nudges (history, drift, diversify) | ✅ Complete |
+| 4 | Advanced analysis (BERTopic, bias, sensationalism) | 🔄 Current |
 | 5 | Prediction & polish (narrative prediction, viz) | ⏳ |
 
 ## Core Principles
@@ -307,6 +307,18 @@ news-tui --debug             # Verbose logging
 - [x] Track reads in history
 
 **Checkpoint criteria:** Articles show sentiment scores, signal, topics. Can view in terminal or browser. ✅
+
+## Phase 3 Checklist ✅
+
+- [x] HTML stripping from RSS content
+- [x] Extractive summarization for better TL;DRs
+- [x] Read history persistence (mark as read)
+- [x] Topic drift detection
+- [x] Diversification nudge banner
+- [x] Reading stats view (press 's')
+- [x] Topic bar charts in stats
+
+**Checkpoint criteria:** "You've read 5 AI articles" nudge works. Stats show 7-day summary with topic breakdown. ✅
 
 ## External References
 
