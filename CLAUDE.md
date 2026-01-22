@@ -3,7 +3,7 @@
 Mindful terminal news reader with analysis-first consumption. News is analyzed before being presented — sentiment, bias, quality scoring — to prevent doomscrolling and promote epistemic hygiene.
 
 **Current phase:** Phase 1 (Foundation MVP)
-**Test count:** 0 tests (target: 80%+ coverage)
+**Test count:** 84 tests (target: 80%+ coverage)
 
 ## Quick Reference
 
@@ -267,14 +267,14 @@ news-tui --debug             # Verbose logging
 
 ## Phase 1 Checklist
 
-- [ ] Project scaffolding (pyproject.toml, structure)
-- [ ] Markov chain module with tests
-- [ ] RSS ingestion (single feed) with tests
-- [ ] SQLite storage setup with tests
-- [ ] Minimal Textual TUI (article list)
-- [ ] Integration test: fetch → generate TL;DR → display
+- [x] Project scaffolding (pyproject.toml, structure)
+- [x] Markov chain module with tests
+- [x] RSS ingestion (single feed) with tests
+- [x] SQLite storage setup with tests
+- [x] Minimal Textual TUI (article list)
+- [x] Integration test: fetch → generate TL;DR → display
 
-**Checkpoint criteria:** Can fetch articles, generate Markov TL;DRs, display in terminal.
+**Checkpoint criteria:** Can fetch articles, generate Markov TL;DRs, display in terminal. ✅
 
 ## External References
 
