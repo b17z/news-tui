@@ -48,11 +48,53 @@ def main(ctx: click.Context, debug: bool, version: bool, refresh: bool) -> None:
     # If no subcommand, launch TUI
     if ctx.invoked_subcommand is None:
         if refresh:
-            click.echo("Refreshing feeds...")
-            # TODO: Implement refresh
+            _do_refresh(config)
 
         from news_tui.app import run_app
-        run_app(debug=debug)
+        run_app(config=config, debug=debug)
+
+
+def _do_refresh(config) -> None:
+    """Refresh all feeds before launching TUI."""
+    from news_tui.core.config import get_db_path, get_sources_path
+    from news_tui.core.errors import Ok
+    from news_tui.ingest.sources import load_sources
+    from news_tui.pipeline import refresh_source
+    from news_tui.track.db import get_connection, init_db
+
+    click.echo("Refreshing feeds...")
+
+    db_path = get_db_path(config)
+    db_result = get_connection(db_path)
+    if isinstance(db_result, Err):
+        click.echo(f"Error: Cannot connect to database", err=True)
+        return
+
+    db = db_result.value
+    init_db(db)
+
+    sources_path = get_sources_path(config)
+    sources_result = load_sources(sources_path)
+    if isinstance(sources_result, Err):
+        click.echo(f"Error: {sources_result.error.message}", err=True)
+        return
+
+    sources = sources_result.value
+    total = 0
+
+    for source in sources:
+        if not source.enabled:
+            continue
+
+        click.echo(f"  Fetching {source.name}...", nl=False)
+        result = refresh_source(db, source)
+        if isinstance(result, Ok):
+            click.echo(f" {result.value} articles")
+            total += result.value
+        else:
+            click.echo(f" error: {result.error}")
+
+    click.echo(f"Done. {total} articles total.")
 
 
 @main.group()
