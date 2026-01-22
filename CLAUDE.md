@@ -2,21 +2,40 @@
 
 Mindful terminal news reader with analysis-first consumption. News is analyzed before being presented — sentiment, bias, quality scoring — to prevent doomscrolling and promote epistemic hygiene.
 
-**Current phase:** Phase 1 (Foundation MVP)
+**Current phase:** Phase 2 (Analysis Layer) ✅
 **Test count:** 84 tests (target: 80%+ coverage)
 
-## Quick Reference
+## Quick Start
 
 ```bash
+# Install
+pip install -e ".[dev]"
+
 # Run the app
 news-tui                     # Launch TUI
-news-tui --refresh           # Refresh feeds first
+news-tui --refresh           # Refresh feeds first, then launch
 
-# CLI commands
+# Keyboard shortcuts (in TUI)
+j/k     Navigate up/down
+Enter/v View article in terminal
+o       Open in browser
+r       Refresh feeds
+s       Show stats
+q       Quit
+?       Help
+```
+
+## CLI Reference
+
+```bash
+# Feed management
 news-tui feeds list          # Show configured sources
 news-tui feeds add <url>     # Add RSS feed
-news-tui stats               # Reading statistics
-news-tui analyze <url>       # Analyze single article
+news-tui feeds remove <id>   # Remove a source
+
+# Analysis & stats
+news-tui stats               # Reading statistics (last 7 days)
+news-tui analyze <url>       # Analyze single article (coming soon)
 ```
 
 ## Architecture
@@ -124,9 +143,9 @@ Each article shows colored score indicators at a glance:
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| 1 | Foundation (scaffolding, Markov, RSS, basic TUI) | 🔄 Current |
-| 2 | Analysis layer (sentiment, topics, quality) | ⏳ |
-| 3 | Tracking & nudges (history, drift, diversify) | ⏳ |
+| 1 | Foundation (scaffolding, Markov, RSS, basic TUI) | ✅ Complete |
+| 2 | Analysis layer (sentiment, topics, quality) | ✅ Complete |
+| 3 | Tracking & nudges (history, drift, diversify) | 🔄 Current |
 | 4 | Advanced analysis (BERTopic, bias, sensationalism) | ⏳ |
 | 5 | Prediction & polish (narrative prediction, viz) | ⏳ |
 
@@ -265,7 +284,7 @@ pytest --cov=news_tui --cov-report=term-missing
 news-tui --debug             # Verbose logging
 ```
 
-## Phase 1 Checklist
+## Phase 1 Checklist ✅
 
 - [x] Project scaffolding (pyproject.toml, structure)
 - [x] Markov chain module with tests
@@ -275,6 +294,19 @@ news-tui --debug             # Verbose logging
 - [x] Integration test: fetch → generate TL;DR → display
 
 **Checkpoint criteria:** Can fetch articles, generate Markov TL;DRs, display in terminal. ✅
+
+## Phase 2 Checklist ✅
+
+- [x] VADER sentiment analysis
+- [x] TF-IDF inspired signal scoring (information density)
+- [x] Topic extraction (keyword-based)
+- [x] Analysis overlay in TUI (score bars with values)
+- [x] Cyberpunk theme (lavender/purple, gunmetal)
+- [x] Article detail view (terminal reading)
+- [x] Open article in browser
+- [x] Track reads in history
+
+**Checkpoint criteria:** Articles show sentiment scores, signal, topics. Can view in terminal or browser. ✅
 
 ## External References
 
