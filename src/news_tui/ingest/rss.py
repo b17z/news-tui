@@ -15,7 +15,7 @@ from typing import Sequence
 import feedparser
 import httpx
 
-from news_tui.core.errors import FetchError, ParseError, Result, err, ok
+from news_tui.core.errors import FetchError, Ok, ParseError, Result, err, ok
 from news_tui.core.types import ArticleId, RawArticle, Source, SourceId
 
 

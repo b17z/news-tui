@@ -52,6 +52,7 @@ class TestArticleStorage:
             "title": "Test Article",
             "url": "https://example.com/article",
             "content": "Article content here.",
+            "fetched_at": "2024-01-15T10:00:00",
             "sentiment": 0.5,
             "topics": '["ai", "tech"]',
         }
@@ -73,12 +74,14 @@ class TestArticleStorage:
             "source_id": "test",
             "title": "Original Title",
             "url": "https://example.com/update",
+            "fetched_at": "2024-01-15T10:00:00",
         }
         article_v2 = {
             "id": "update-test",
             "source_id": "test",
             "title": "Updated Title",
             "url": "https://example.com/update",
+            "fetched_at": "2024-01-15T11:00:00",
         }
 
         store_article(test_db, article_v1)

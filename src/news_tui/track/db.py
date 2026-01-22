@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlite_utils import Database
+from sqlite_utils.db import NotFoundError
 
 from news_tui.core.errors import StorageError, Result, err, ok
 
@@ -159,6 +160,8 @@ def _migrate_v1(db: Database) -> None:
 def store_article(db: Database, article_data: dict[str, Any]) -> Result[None, StorageError]:
     """Store or update an article in the database.
 
+    Uses INSERT OR REPLACE to handle both new articles and updates.
+
     Args:
         db: Database connection.
         article_data: Article data as dictionary.
@@ -167,7 +170,7 @@ def store_article(db: Database, article_data: dict[str, Any]) -> Result[None, St
         Result indicating success or failure.
     """
     try:
-        db["articles"].upsert(article_data, pk="id")
+        db["articles"].insert(article_data, replace=True)
         return ok(None)
     except sqlite3.Error as e:
         return err(StorageError("write", f"Cannot store article: {e}"))
@@ -186,6 +189,8 @@ def get_article(db: Database, article_id: str) -> Result[dict[str, Any] | None, 
     try:
         row = db["articles"].get(article_id)
         return ok(row)
+    except NotFoundError:
+        return ok(None)
     except sqlite3.Error as e:
         return err(StorageError("read", f"Cannot retrieve article: {e}"))
 

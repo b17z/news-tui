@@ -6,7 +6,7 @@ and sEntiment Reasoner), which is fast and doesn't require ML model loading.
 VADER is specifically tuned for social media and news text.
 """
 
-from news_tui.core.errors import AnalysisError, Result, err, ok
+from news_tui.core.errors import AnalysisError, Err, Result, err, ok
 
 # Lazy load nltk to avoid startup cost
 _vader_analyzer = None
@@ -75,9 +75,9 @@ def analyze_headline_vs_body(headline: str, body: str, article_id: str = "") -> 
     headline_result = analyze_sentiment(headline, article_id)
     body_result = analyze_sentiment(body, article_id)
 
-    if isinstance(headline_result, err):
+    if isinstance(headline_result, Err):
         return headline_result
-    if isinstance(body_result, err):
+    if isinstance(body_result, Err):
         return body_result
 
     diff = headline_result.value - body_result.value
