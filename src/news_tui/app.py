@@ -105,6 +105,27 @@ class PlaceholderItem(ListItem):
         yield Label(f"[dim]{self.message}[/dim]")
 
 
+class NudgeBanner(Static):
+    """A nudge banner warning about topic drift or other patterns."""
+
+    def __init__(self, drift_info: dict, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.drift_info = drift_info
+        self.add_class("nudge-banner")
+
+    def compose(self) -> ComposeResult:
+        topics = ", ".join(f"#{t}" for t in self.drift_info["dominant_topics"])
+        percentage = int(self.drift_info["percentage"] * 100)
+        suggested = ", ".join(self.drift_info["suggested_topics"])
+
+        yield Label(
+            f"[bold #fbbf24]DIVERSIFY:[/bold #fbbf24] "
+            f"[#e4e4f0]{percentage}% of recent reads are {topics}[/#e4e4f0]"
+        )
+        if suggested:
+            yield Label(f"[#7c7c9a]Consider exploring: {suggested}[/#7c7c9a]")
+
+
 class ArticleList(ListView):
     """List of articles with keyboard navigation."""
 
@@ -118,6 +139,7 @@ class MainScreen(Static):
 
     def compose(self) -> ComposeResult:
         yield Container(
+            Container(id="nudge-container"),  # For drift warnings
             ArticleList(id="article-list"),
             id="main-container",
         )
@@ -234,6 +256,90 @@ class ArticleDetailScreen(Screen):
         container.scroll_up()
 
 
+STATS_SCREEN_CSS = """
+StatsScreen {
+    background: #13131f;
+}
+
+#stats-container {
+    background: #13131f;
+    padding: 2;
+}
+
+.stats-title {
+    text-style: bold;
+    color: #c4b5fd;
+    margin-bottom: 1;
+}
+
+.stats-value {
+    color: #a78bfa;
+    text-style: bold;
+}
+
+.stats-label {
+    color: #7c7c9a;
+}
+
+.topic-bar {
+    margin-top: 1;
+}
+"""
+
+
+class StatsScreen(Screen):
+    """Screen showing reading statistics."""
+
+    CSS = STATS_SCREEN_CSS
+
+    BINDINGS = [
+        Binding("escape", "go_back", "Back"),
+        Binding("q", "go_back", "Back"),
+    ]
+
+    def __init__(self, stats: dict, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.stats = stats
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+
+        with ScrollableContainer(id="stats-container"):
+            yield Label("[bold #c4b5fd]Reading Statistics (Last 7 Days)[/bold #c4b5fd]", classes="stats-title")
+            yield Label("=" * 40)
+
+            # Summary stats
+            yield Label(f"\n[#7c7c9a]Articles read:[/#7c7c9a] [#a78bfa bold]{self.stats['total_articles']}[/#a78bfa bold]")
+            yield Label(f"[#7c7c9a]Reading time:[/#7c7c9a] [#a78bfa bold]{self.stats['total_time_minutes']} minutes[/#a78bfa bold]")
+            yield Label(f"[#7c7c9a]Average per day:[/#7c7c9a] [#a78bfa bold]{self.stats['articles_per_day']:.1f} articles[/#a78bfa bold]")
+
+            # Topic breakdown
+            if self.stats["top_topics"]:
+                yield Label("\n[bold #c4b5fd]Top Topics[/bold #c4b5fd]")
+                for topic, count in self.stats["top_topics"][:5]:
+                    # Create a simple bar chart
+                    max_count = self.stats["top_topics"][0][1] if self.stats["top_topics"] else 1
+                    bar_length = int((count / max_count) * 20)
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    yield Label(f"  [#8b5cf6]#{topic}[/#8b5cf6] [{self._get_topic_color(topic)}]{bar}[/] {count}")
+            else:
+                yield Label("\n[dim]No topics tracked yet. Read some articles![/dim]")
+
+        yield Footer()
+
+    def _get_topic_color(self, topic: str) -> str:
+        """Get color for topic bar."""
+        colors = {
+            "ai": "#c084fc", "tech": "#60a5fa", "crypto": "#fbbf24",
+            "finance": "#34d399", "science": "#22d3ee", "culture": "#f472b6"
+        }
+        return colors.get(topic.lower(), "#7c7c9a")
+
+    def action_go_back(self) -> None:
+        """Go back to main view."""
+        self.app.pop_screen()
+
+
 class NewsTuiApp(App):
     """The main news-tui application."""
 
@@ -325,7 +431,20 @@ class NewsTuiApp(App):
 
     def action_stats(self) -> None:
         """Show reading statistics."""
-        self.notify("Stats view coming in Phase 3...")
+        db = self._get_db()
+        if db is None:
+            self.notify("No database connection", severity="error")
+            return
+
+        from news_tui.track.history import get_reading_stats
+
+        stats_result = get_reading_stats(db, days=7)
+        if isinstance(stats_result, Err):
+            self.notify(f"Error loading stats: {stats_result.error.message}", severity="error")
+            return
+
+        stats = stats_result.value
+        self.push_screen(StatsScreen(stats))
 
     def _get_selected_article(self) -> Article | None:
         """Get the currently selected article."""
@@ -411,6 +530,26 @@ class NewsTuiApp(App):
 
         for article in articles:
             article_list.append(ArticleListItem(article))
+
+        # Check for topic drift and show nudge if detected
+        self._check_drift(db)
+
+    def _check_drift(self, db) -> None:
+        """Check for topic drift and display nudge banner if detected."""
+        from news_tui.track.drift import detect_topic_drift
+
+        drift_result = detect_topic_drift(db, window_size=10, threshold=0.6)
+        if isinstance(drift_result, Err):
+            return
+
+        drift_info = drift_result.value
+
+        # Get nudge container and clear old nudges
+        nudge_container = self.query_one("#nudge-container", Container)
+        nudge_container.remove_children()
+
+        if drift_info:
+            nudge_container.mount(NudgeBanner(drift_info))
 
 
 def run_app(config: Config | None = None, debug: bool = False) -> None:
