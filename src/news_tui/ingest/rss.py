@@ -6,17 +6,56 @@ Security notes:
 - All parsed content is validated through Pydantic models
 - URLs are validated before fetching
 - Content is sanitized to prevent XSS (though we're a TUI, be defensive)
+- HTML is stripped from content to get clean text
 """
 
 import hashlib
+import html
+import re
 from datetime import datetime
 from typing import Sequence
 
 import feedparser
 import httpx
+from bs4 import BeautifulSoup
 
 from news_tui.core.errors import FetchError, Ok, ParseError, Result, err, ok
 from news_tui.core.types import ArticleId, RawArticle, Source, SourceId
+
+
+def strip_html(content: str) -> str:
+    """Strip HTML tags and decode entities from content.
+
+    Args:
+        content: Raw HTML content from RSS feed.
+
+    Returns:
+        Clean text with HTML removed and entities decoded.
+    """
+    if not content:
+        return ""
+
+    # Use BeautifulSoup to extract text from HTML
+    soup = BeautifulSoup(content, "html.parser")
+
+    # Remove script and style elements
+    for element in soup(["script", "style", "head", "meta", "link"]):
+        element.decompose()
+
+    # Get text content
+    text = soup.get_text(separator=" ", strip=True)
+
+    # Decode any remaining HTML entities
+    text = html.unescape(text)
+
+    # Clean up whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Remove common RSS attribution patterns
+    # "- by Author Read on Source" or "by Author Watch on Source"
+    text = re.sub(r"\s*-?\s*by\s+[\w\s()]+\s+(Read|Watch|Listen)\s+on\s+\w+\s*$", "", text, flags=re.IGNORECASE)
+
+    return text
 
 
 def fetch_rss(source: Source, timeout_seconds: float = 30.0) -> Result[list[RawArticle], FetchError]:
@@ -90,23 +129,29 @@ def _parse_entry(entry: feedparser.FeedParserDict, source_id: SourceId) -> Resul
         Result containing RawArticle on success, ParseError on failure.
     """
     # Required: title and link
-    title = entry.get("title", "").strip()
+    raw_title = entry.get("title", "").strip()
     link = entry.get("link", "").strip()
 
-    if not title:
+    if not raw_title:
         return err(ParseError(source_id, "Entry missing title"))
     if not link:
         return err(ParseError(source_id, "Entry missing link"))
+
+    # Clean title (some feeds have HTML entities in titles)
+    title = html.unescape(raw_title)
 
     # Generate stable ID from URL
     article_id = _generate_article_id(link)
 
     # Content: prefer content, fall back to summary
-    content = ""
+    # Strip HTML to get clean text for analysis
+    raw_content = ""
     if "content" in entry and entry.content:
-        content = entry.content[0].get("value", "")
+        raw_content = entry.content[0].get("value", "")
     elif "summary" in entry:
-        content = entry.get("summary", "")
+        raw_content = entry.get("summary", "")
+
+    content = strip_html(raw_content)
 
     # Parse published date
     published_at = None

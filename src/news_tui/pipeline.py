@@ -22,7 +22,7 @@ from news_tui.core.types import (
     Source,
     TopicTag,
 )
-from news_tui.generate.markov import generate_tldr
+from news_tui.generate.summarize import smart_tldr
 from news_tui.ingest.rss import fetch_rss
 from news_tui.track.db import get_recent_articles, store_article
 
@@ -55,8 +55,9 @@ def analyze_article(raw: RawArticle) -> Article:
     # Reading time
     read_time = reading_time_minutes(raw.content)
 
-    # Generate TL;DR using Markov chains
-    tldr = generate_tldr(raw.content, max_words=50)
+    # Generate TL;DR using smart summarization
+    # Uses extractive for short texts, Markov for longer
+    tldr = smart_tldr(raw.content, max_words=50)
     if not tldr:
         # Fallback to truncated content
         words = raw.content.split()[:40]
