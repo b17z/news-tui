@@ -1,0 +1,38 @@
+# Default news sources for news-tui
+# Add your own RSS feeds here
+
+sources:
+  - id: hn
+    name: Hacker News
+    url: https://hnrss.org/frontpage
+    source_type: rss
+    bias_rating: 0.0
+    reliability_score: 0.7
+
+  - id: lobsters
+    name: Lobste.rs
+    url: https://lobste.rs/rss
+    source_type: rss
+    bias_rating: 0.0
+    reliability_score: 0.75
+
+  - id: aeon
+    name: Aeon
+    url: https://aeon.co/feed.rss
+    source_type: rss
+    bias_rating: -0.1
+    reliability_score: 0.85
+
+  - id: quanta
+    name: Quanta Magazine
+    url: https://www.quantamagazine.org/feed/
+    source_type: rss
+    bias_rating: 0.0
+    reliability_score: 0.9
+
+  - id: marginalian
+    name: The Marginalian
+    url: https://www.themarginalian.org/feed/
+    source_type: rss
+    bias_rating: -0.1
+    reliability_score: 0.85

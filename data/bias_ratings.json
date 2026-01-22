@@ -1,0 +1,55 @@
+{
+  "_comment": "Source bias ratings: -1.0 (left) to 1.0 (right), 0.0 is center",
+  "_reliability": "Reliability scores: 0.0 (unreliable) to 1.0 (highly reliable)",
+
+  "sources": {
+    "hnrss.org": {
+      "name": "Hacker News",
+      "bias": 0.0,
+      "reliability": 0.7,
+      "notes": "Tech-focused, libertarian lean, quality varies by submission"
+    },
+    "lobste.rs": {
+      "name": "Lobsters",
+      "bias": 0.0,
+      "reliability": 0.75,
+      "notes": "Tech-focused, invite-only community, higher signal"
+    },
+    "aeon.co": {
+      "name": "Aeon",
+      "bias": -0.1,
+      "reliability": 0.85,
+      "notes": "Long-form essays, philosophy and science focus"
+    },
+    "quantamagazine.org": {
+      "name": "Quanta Magazine",
+      "bias": 0.0,
+      "reliability": 0.9,
+      "notes": "Science journalism, Simons Foundation funded"
+    },
+    "themarginalian.org": {
+      "name": "The Marginalian",
+      "bias": -0.1,
+      "reliability": 0.85,
+      "notes": "Culture and ideas curation by Maria Popova"
+    },
+    "arstechnica.com": {
+      "name": "Ars Technica",
+      "bias": -0.1,
+      "reliability": 0.8,
+      "notes": "Tech journalism, in-depth coverage"
+    },
+    "reuters.com": {
+      "name": "Reuters",
+      "bias": 0.0,
+      "reliability": 0.9,
+      "notes": "Wire service, factual reporting"
+    },
+    "apnews.com": {
+      "name": "Associated Press",
+      "bias": 0.0,
+      "reliability": 0.9,
+      "notes": "Wire service, factual reporting"
+    }
+  }
+}

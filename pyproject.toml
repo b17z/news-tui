@@ -1,0 +1,180 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "news-tui"
+version = "0.1.0"
+description = "Mindful terminal news reader with analysis-first consumption"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+keywords = ["news", "tui", "terminal", "rss", "nlp", "analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: News/Diary",
+]
+
+dependencies = [
+    # TUI
+    "textual>=0.50.0",
+
+    # NLP/ML
+    "nltk>=3.8.0",           # VADER sentiment
+    "scikit-learn>=1.4.0",   # TF-IDF, topic modeling
+
+    # Data
+    "feedparser>=6.0.0",     # RSS parsing
+    "httpx>=0.27.0",         # Async HTTP
+    "beautifulsoup4>=4.12.0", # HTML parsing
+    "lxml>=5.0.0",           # Fast XML/HTML parsing
+
+    # Storage
+    "sqlite-utils>=3.35.0",  # SQLite wrapper
+
+    # Utils
+    "rich>=13.0.0",          # Terminal formatting
+    "pydantic>=2.5.0",       # Data validation
+    "click>=8.1.0",          # CLI framework
+    "pyyaml>=6.0.0",         # Config files (use safe_load only!)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+    "black>=24.0.0",
+    "pre-commit>=3.6.0",
+]
+
+# Advanced NLP (Phase 4+)
+ml = [
+    "sentence-transformers>=2.2.0",  # Embeddings
+    "bertopic>=0.16.0",              # Topic modeling
+]
+
+[project.scripts]
+news-tui = "news_tui.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/be-nvy/news-tui"
+Documentation = "https://github.com/be-nvy/news-tui#readme"
+Repository = "https://github.com/be-nvy/news-tui.git"
+Issues = "https://github.com/be-nvy/news-tui/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/news_tui"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+]
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "S",      # flake8-bandit (security)
+    "T20",    # flake8-print
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "PL",     # pylint
+    "RUF",    # ruff-specific
+]
+ignore = [
+    "E501",   # line length (handled by formatter)
+    "PLR0913", # too many arguments (FP style has many)
+    "PLR2004", # magic values (we document them)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # assert is fine in tests
+    "S106",   # hardcoded passwords in tests are fine
+    "PLR2004", # magic values ok in tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["news_tui"]
+
+# Mypy configuration
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "feedparser.*",
+    "nltk.*",
+    "sklearn.*",
+    "sqlite_utils.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/news_tui"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 80
+show_missing = true
