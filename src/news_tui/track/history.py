@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlite_utils import Database
 
-from news_tui.core.errors import StorageError, Result, ok
+from news_tui.core.errors import Err, StorageError, Result, ok
 from news_tui.track.db import get_read_history, record_read
 
 
@@ -50,7 +50,7 @@ def get_reading_stats(db: Database, days: int = 7) -> Result[dict[str, Any], Sto
         Result containing stats dictionary.
     """
     history_result = get_read_history(db, limit=1000)
-    if isinstance(history_result, err):
+    if isinstance(history_result, Err):
         return history_result
 
     history = history_result.value

@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlite_utils import Database
 
-from news_tui.core.errors import StorageError, Result, ok
+from news_tui.core.errors import Err, StorageError, Result, ok
 from news_tui.core.types import TopicTag
 from news_tui.track.db import get_read_history
 
@@ -32,7 +32,7 @@ def detect_topic_drift(
         Drift info includes: dominant_topics, percentage, suggested_topics.
     """
     history_result = get_read_history(db, limit=window_size)
-    if isinstance(history_result, err):
+    if isinstance(history_result, Err):
         return history_result
 
     history = history_result.value

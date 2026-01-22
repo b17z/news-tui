@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from news_tui.core.errors import ConfigError, Result, err, ok
+from news_tui.core.errors import ConfigError, Err, Result, err, ok
 from news_tui.core.types import Source, SourceId
 
 # Default sources for first-time users
@@ -60,7 +60,7 @@ def load_sources(sources_path: Path) -> Result[list[Source], ConfigError]:
     if not sources_path.exists():
         # Create default sources file
         create_result = _create_default_sources(sources_path)
-        if isinstance(create_result, err):
+        if isinstance(create_result, Err):
             return create_result
 
     try:
