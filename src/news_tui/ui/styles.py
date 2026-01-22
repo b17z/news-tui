@@ -1,61 +1,86 @@
 """CSS styles and theme configuration for news-tui.
 
 This module defines the visual theming using Textual's CSS system.
+Cyberpunk aesthetic: lavender/purple accents on dark gunmetal.
 """
 
-# Topic tag colors
-TOPIC_COLORS: dict[str, str] = {
-    "ai": "#8b5cf6",        # Purple
-    "tech": "#3b82f6",      # Blue
-    "crypto": "#f59e0b",    # Amber
-    "finance": "#10b981",   # Emerald
-    "politics": "#ef4444",  # Red
-    "science": "#06b6d4",   # Cyan
-    "culture": "#ec4899",   # Pink
-    "philosophy": "#6366f1", # Indigo
-    "default": "#6b7280",   # Gray
+# Cyberpunk color palette
+COLORS = {
+    # Background tones (gunmetal/dark)
+    "bg_dark": "#0d0d14",       # Near-black with blue tint
+    "bg_main": "#13131f",       # Gunmetal dark
+    "bg_surface": "#1a1a2e",    # Elevated surface
+    "bg_highlight": "#242438",  # Highlighted surface
+
+    # Accent colors (lavender/purple)
+    "lavender": "#c4b5fd",      # Light lavender (primary)
+    "purple": "#a78bfa",        # Medium purple
+    "violet": "#8b5cf6",        # Vivid violet
+    "pink_accent": "#f0abfc",   # Pink for highlights
+
+    # Text
+    "text_primary": "#e4e4f0",  # Off-white
+    "text_muted": "#7c7c9a",    # Muted lavender-gray
 }
 
-# Main application CSS
+# Topic tag colors (cyberpunk palette)
+TOPIC_COLORS: dict[str, str] = {
+    "ai": "#c084fc",        # Purple
+    "tech": "#60a5fa",      # Blue
+    "crypto": "#fbbf24",    # Amber
+    "finance": "#34d399",   # Emerald
+    "politics": "#f87171",  # Red
+    "science": "#22d3ee",   # Cyan
+    "culture": "#f472b6",   # Pink
+    "philosophy": "#a78bfa", # Lavender
+    "default": "#7c7c9a",   # Muted gray
+}
+
+# Main application CSS - Cyberpunk theme
 APP_CSS = """
 Screen {
-    background: $surface;
+    background: #13131f;
 }
 
 /* Article list */
 .article-list {
     height: 100%;
-    border: solid $primary;
+    border: solid #8b5cf6;
+    background: #13131f;
 }
 
-.article-item {
+ListItem {
     padding: 1;
-    border-bottom: solid $surface-darken-1;
+    background: #13131f;
 }
 
-.article-item:hover {
-    background: $surface-lighten-1;
+ListItem:hover {
+    background: #1a1a2e;
 }
 
-.article-item:focus {
-    background: $primary-darken-2;
+ListItem:focus {
+    background: #242438;
+}
+
+ListItem > Label {
+    color: #e4e4f0;
 }
 
 /* Article card */
 .article-card {
     padding: 1 2;
     margin: 1;
-    border: round $primary;
-    background: $surface;
+    border: round #8b5cf6;
+    background: #1a1a2e;
 }
 
 .article-title {
     text-style: bold;
-    color: $text;
+    color: #c4b5fd;
 }
 
 .article-meta {
-    color: $text-muted;
+    color: #7c7c9a;
     margin-bottom: 1;
 }
 
@@ -124,53 +149,69 @@ Screen {
 .tldr {
     margin-top: 1;
     padding: 1;
-    background: $surface-darken-1;
-    border: round $surface-lighten-1;
-    color: $text-muted;
+    background: #0d0d14;
+    border: round #242438;
+    color: #7c7c9a;
 }
 
 /* Nudge banners */
 .nudge-banner {
     padding: 1 2;
     margin: 1;
-    border: round $warning;
-    background: $warning-darken-3;
+    border: round #fbbf24;
+    background: #1a1a2e;
 }
 
 .nudge-banner.warning {
-    border: round $warning;
-    background: $warning-darken-3;
+    border: round #fbbf24;
+    background: #1a1a2e;
 }
 
 .nudge-banner.info {
-    border: round $primary;
-    background: $primary-darken-3;
+    border: round #a78bfa;
+    background: #1a1a2e;
 }
 
 .nudge-banner.alert {
-    border: round $error;
-    background: $error-darken-3;
+    border: round #f87171;
+    background: #1a1a2e;
 }
 
-/* Header */
+/* Header - Cyberpunk purple gradient feel */
 Header {
-    background: $primary;
-    color: $text;
+    background: #8b5cf6;
+    color: #0d0d14;
 }
 
 /* Footer */
 Footer {
-    background: $surface-darken-1;
+    background: #0d0d14;
+    color: #7c7c9a;
+}
+
+FooterKey > .footer-key--key {
+    background: #8b5cf6;
+    color: #0d0d14;
+}
+
+FooterKey > .footer-key--description {
+    color: #c4b5fd;
 }
 
 /* Stats view */
 .stats-container {
     padding: 2;
+    background: #13131f;
 }
 
 .stat-value {
     text-style: bold;
-    color: $primary;
+    color: #c4b5fd;
+}
+
+/* Main container */
+#main-container {
+    background: #13131f;
 }
 """
 
