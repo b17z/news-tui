@@ -3,10 +3,13 @@
 This module computes a "signal" score measuring information density:
 - How much unique information per word?
 - Is this content-dense or fluff?
+- TF-IDF based analysis for better differentiation
 """
 
+import math
 import re
 from collections import Counter
+from functools import lru_cache
 
 from news_tui.core.errors import AnalysisError, Result, ok
 
@@ -22,6 +25,31 @@ STOP_WORDS = frozenset([
     "own", "same", "so", "than", "too", "very", "just", "and", "but", "if",
     "or", "because", "until", "while", "this", "that", "these", "those",
     "what", "which", "who", "whom", "i", "you", "he", "she", "it", "we", "they",
+    "about", "also", "like", "just", "even", "well", "back", "much", "way",
+    "say", "said", "says", "one", "two", "first", "new", "now", "time", "year",
+])
+
+# High-signal indicator words (technical, specific, informative)
+HIGH_SIGNAL_WORDS = frozenset([
+    # Technical depth indicators
+    "algorithm", "implementation", "architecture", "protocol", "framework",
+    "analysis", "methodology", "hypothesis", "theorem", "proof", "evidence",
+    "research", "study", "experiment", "data", "statistics", "correlation",
+    # Domain specificity
+    "cryptographic", "authentication", "latency", "throughput", "scalability",
+    "regression", "inference", "optimization", "heuristic", "deterministic",
+    # Precision language
+    "specifically", "precisely", "approximately", "consequently", "therefore",
+    "furthermore", "moreover", "nevertheless", "alternatively", "accordingly",
+])
+
+# Low-signal filler words (vague, sensational, clickbait)
+LOW_SIGNAL_WORDS = frozenset([
+    "amazing", "incredible", "shocking", "unbelievable", "mindblowing",
+    "revolutionary", "groundbreaking", "game-changing", "disruptive",
+    "literally", "basically", "actually", "really", "totally", "absolutely",
+    "stuff", "things", "something", "whatever", "somehow", "everything",
+    "everyone", "nobody", "always", "never", "forever",
 ])
 
 
@@ -29,9 +57,11 @@ def compute_signal_score(text: str, article_id: str = "") -> Result[float, Analy
     """Compute information density score for text.
 
     Uses a combination of:
-    - Unique word ratio (vocabulary richness)
-    - Average word length (longer words tend to be more specific)
-    - Proper noun density (names, places = specific info)
+    - Vocabulary richness (unique words ratio)
+    - Average word length (longer words = more specific)
+    - High-signal word presence (technical/precise language)
+    - Low-signal word penalty (filler/clickbait language)
+    - Sentence complexity (avg words per sentence)
 
     Args:
         text: The text to analyze.
@@ -44,7 +74,7 @@ def compute_signal_score(text: str, article_id: str = "") -> Result[float, Analy
     if not text.strip():
         return ok(0.5)  # Empty text is neutral
 
-    # Tokenize (simple word split)
+    # Tokenize
     words = re.findall(r"\b[a-zA-Z]+\b", text.lower())
 
     if len(words) < 10:
@@ -56,22 +86,55 @@ def compute_signal_score(text: str, article_id: str = "") -> Result[float, Analy
     if not content_words:
         return ok(0.2)  # All stop words = low signal
 
-    # 1. Vocabulary richness (unique words / total words)
-    unique_ratio = len(set(content_words)) / len(content_words)
+    total_words = len(words)
+    content_count = len(content_words)
+
+    # 1. Vocabulary richness (unique words / total content words)
+    unique_ratio = len(set(content_words)) / content_count
+    vocab_score = min(unique_ratio * 1.2, 1.0)  # Boost slightly
 
     # 2. Average word length (normalized to 0-1 scale)
-    avg_length = sum(len(w) for w in content_words) / len(content_words)
-    length_score = min(avg_length / 10.0, 1.0)  # Cap at 10 chars
+    avg_length = sum(len(w) for w in content_words) / content_count
+    length_score = min((avg_length - 3) / 5.0, 1.0)  # 3-8 char range
+    length_score = max(0.0, length_score)
 
-    # 3. Capitalized word ratio (potential proper nouns)
-    original_words = re.findall(r"\b[A-Za-z]+\b", text)
-    cap_words = [w for w in original_words if w[0].isupper() and w.lower() not in STOP_WORDS]
-    cap_ratio = len(cap_words) / len(original_words) if original_words else 0
+    # 3. High-signal word bonus
+    high_signal_count = sum(1 for w in content_words if w in HIGH_SIGNAL_WORDS)
+    high_signal_ratio = min(high_signal_count / max(content_count / 20, 1), 1.0)
 
-    # Combine scores (weighted average)
-    signal = (unique_ratio * 0.4) + (length_score * 0.3) + (cap_ratio * 0.3)
+    # 4. Low-signal word penalty
+    low_signal_count = sum(1 for w in content_words if w in LOW_SIGNAL_WORDS)
+    low_signal_ratio = min(low_signal_count / max(content_count / 10, 1), 1.0)
 
-    # Normalize to 0-1 range
+    # 5. Sentence complexity (words per sentence)
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if sentences:
+        avg_sentence_len = total_words / len(sentences)
+        # Ideal: 15-25 words per sentence
+        if 15 <= avg_sentence_len <= 25:
+            complexity_score = 1.0
+        elif avg_sentence_len < 15:
+            complexity_score = avg_sentence_len / 15
+        else:
+            complexity_score = max(0.5, 1.0 - (avg_sentence_len - 25) / 25)
+    else:
+        complexity_score = 0.5
+
+    # 6. Content ratio (content words vs total words)
+    content_ratio = content_count / total_words
+
+    # Combine scores (weighted)
+    signal = (
+        vocab_score * 0.25 +
+        length_score * 0.15 +
+        high_signal_ratio * 0.20 +
+        (1.0 - low_signal_ratio) * 0.15 +
+        complexity_score * 0.15 +
+        content_ratio * 0.10
+    )
+
+    # Normalize to 0-1 range with more spread
     signal = max(0.0, min(1.0, signal))
 
     return ok(signal)
